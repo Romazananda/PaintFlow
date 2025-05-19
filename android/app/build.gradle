@@ -117,3 +117,9 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+configurations {
+    all {
+        exclude group: 'androidx.annotation', module: 'annotation-experimental'
+    }
+}

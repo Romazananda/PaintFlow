@@ -1,12 +1,21 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
 import { Element3 } from 'iconsax-react-native';
 import { colors, fontType } from './src/theme';
+
 import CategoryList from './components/CategoryList';
 import SearchBar from './components/SearchBar';
 import PaintingList from './components/PaintingList';
 
-export default function App() {
+import SearchResultsScreen from './screens/SearchResultsScreen';
+import CategoryScreen from './screens/CategoryScreen';
+
+const Stack = createNativeStackNavigator();
+
+function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -18,7 +27,7 @@ export default function App() {
       </View>
 
       {/* Kategori */}
-      <CategoryList />
+      <CategoryList navigation={navigation} /> {/* ✅ Kirim navigation */}
 
       {/* Search Bar */}
       <SearchBar />
@@ -26,6 +35,19 @@ export default function App() {
       {/* Daftar Lukisan */}
       <PaintingList />
     </View>
+  );
+}
+
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+        <Stack.Screen name="Category" component={CategoryScreen} options={{ title: 'Kategori Lukisan' }} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 

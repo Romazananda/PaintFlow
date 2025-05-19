@@ -1,65 +1,45 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { colors, fontType } from '../src/theme';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
-export default function CategoryList({ selectedCategory: selectedProp, onSelectCategory }) {
-  const categories = ['Renaissance', 'Baroque', 'Impressionism', 'Modern Art', 'Abstract', 'Contemporary'];
+const categories = ['Impressionism', 'Renaissance', 'Surrealism', 'Baroque'];
 
-  // Jika tidak ada selectedCategory dari props, gunakan state lokal
-  const [selectedCategory, setSelectedCategory] = useState(selectedProp || 'Renaissance');
-
+const CategoryList = ({ navigation }) => {
   const handleCategoryPress = (category) => {
-    setSelectedCategory(category); // update state lokal
-    if (onSelectCategory) {
-      onSelectCategory(category); // panggil callback jika ada
-    }
+    navigation.navigate('Category', { selectedCategory: category });
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {categories.map((category, index) => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+        {categories.map((category) => (
           <TouchableOpacity
-            key={index}
+            key={category}
+            style={styles.categoryItem}
             onPress={() => handleCategoryPress(category)}
-            style={[
-              styles.item,
-              index === 0 ? { marginLeft: 24 } : index === categories.length - 1 ? { marginRight: 24 } : {},
-              selectedCategory === category && { backgroundColor: colors.gold(0.1) }
-            ]}
           >
-            <Text
-              style={[
-                styles.title,
-                selectedCategory === category ? { color: colors.gold() } : {}
-              ]}
-            >
-              {category}
-            </Text>
+            <Text style={styles.text}>{category}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 10,
+  container: { paddingVertical: 10 }, // beri ruang vertikal jika perlu
+  scrollContainer: {
+    paddingHorizontal: 16, // padding kiri kanan di dalam scroll
+    alignItems: 'center',  // agar item center secara vertikal
   },
-  item: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 5,
-    backgroundColor: colors.white(),
-    elevation: 3,
+  categoryItem: {
+    padding: 10,
+    backgroundColor: '#eee',
+    marginRight: 8,
+    borderRadius: 8,
   },
-  title: {
-    fontFamily: fontType['Pjs-SemiBold'],
+  text: {
     fontSize: 14,
-    color: colors.black(),
   },
 });
+
+export default CategoryList;

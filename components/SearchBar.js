@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { SearchNormal } from 'iconsax-react-native';
 import { colors } from '../src/theme';
+import { useNavigation } from '@react-navigation/native';
 
-export default function SearchBar({ onSearch }) {
+export default function SearchBar() {
   const [query, setQuery] = useState('');
+  const navigation = useNavigation();
 
   const handleSearch = () => {
-    if (onSearch && typeof onSearch === 'function') {
-      onSearch(query.trim());
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length > 0) {
+      navigation.navigate('SearchResults', { query: trimmedQuery });
     }
   };
 
