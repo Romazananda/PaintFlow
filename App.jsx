@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Animated } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -16,6 +16,21 @@ import CategoryScreen from './screens/CategoryScreen';
 import AddPaintingScreen from './screens/AddPaintingScreen';
 import SearchResultsScreen from './screens/SearchResultsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+
+// Komponen animasi fade untuk icon tab
+function AnimatedTabBarIcon({ focused, children }) {
+  const opacity = React.useRef(new Animated.Value(focused ? 1 : 0.5)).current;
+
+  React.useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: focused ? 1 : 0.5,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [focused]);
+
+  return <Animated.View style={{ opacity }}>{children}</Animated.View>;
+}
 
 // Stack Navigator untuk halaman lain
 const Stack = createNativeStackNavigator();
@@ -36,22 +51,30 @@ function MainTabs() {
           height: 60,
           paddingBottom: 5,
         },
-        tabBarIcon: ({ color }) => {
-          if (route.name === 'Home') return <Home2 color={color} size={24} />;
-          if (route.name === 'Category') return <Category color={color} size={24} />;
-          if (route.name === 'Add') return <AddSquare color={color} size={24} />;
-          if (route.name === 'Profile') return <ProfileCircle color={color} size={24} />;
-        },
         tabBarLabelStyle: {
           fontFamily: fontType.regular,
           fontSize: 12,
+        },
+        animationEnabled: true,
+        tabBarIcon: ({ color, focused }) => {
+          let IconComponent;
+          if (route.name === 'Home') IconComponent = Home2;
+          else if (route.name === 'Category') IconComponent = Category;
+          else if (route.name === 'Add') IconComponent = AddSquare;
+          else if (route.name === 'Profile') IconComponent = ProfileCircle;
+
+          return (
+            <AnimatedTabBarIcon focused={focused}>
+              <IconComponent color={color} size={24} />
+            </AnimatedTabBarIcon>
+          );
         },
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Category" component={CategoryScreen} />
       <Tab.Screen name="Add" component={AddPaintingScreen} />
-     <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

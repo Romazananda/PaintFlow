@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  Animated,
 } from 'react-native';
 
 const colors = {
@@ -74,40 +75,71 @@ const paintingData = [
   },
 ];
 
-const CategoryList = ({ selectedCategory, onSelectCategory }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    style={styles.categoryListContainer}
-    contentContainerStyle={{ paddingHorizontal: 16 }}
-    decelerationRate="fast"
-    snapToInterval={100}
-    snapToAlignment="start"
-    pagingEnabled={false}
-  >
-    {categories.map((cat) => (
-      <TouchableOpacity
-        key={cat}
-        style={[
-          styles.categoryItem,
-          selectedCategory === cat && styles.categoryItemSelected,
-        ]}
-        onPress={() => onSelectCategory(cat)}
-      >
-        <Text
-          style={[
-            styles.categoryText,
-            selectedCategory === cat && styles.categoryTextSelected,
-          ]}
-        >
-          {cat}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </ScrollView>
-);
+// Animated TouchableOpacity for category item with fade
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const PaintingCard = ({ painting }) => (
+const CategoryList = ({ selectedCategory, onSelectCategory }) => {
+  // Animations for categories fade
+  const animations = useMemo(
+    () =>
+      categories.reduce((acc, cat) => {
+        acc[cat] = new Animated.Value(cat === selectedCategory ? 1 : 0.5);
+        return acc;
+      }, {}),
+    []
+  );
+
+  React.useEffect(() => {
+    categories.forEach((cat) => {
+      Animated.timing(animations[cat], {
+        toValue: cat === selectedCategory ? 1 : 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [selectedCategory]);
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.categoryListContainer}
+      contentContainerStyle={{ paddingHorizontal: 16 }}
+      decelerationRate="fast"
+      snapToInterval={100}
+      snapToAlignment="start"
+      pagingEnabled={false}
+    >
+      {categories.map((cat) => (
+        <AnimatedTouchable
+          key={cat}
+          style={[
+            styles.categoryItem,
+            {
+              backgroundColor:
+                selectedCategory === cat ? colors.maroon() : colors.white(),
+              borderColor: colors.maroon(),
+              opacity: animations[cat],
+            },
+          ]}
+          onPress={() => onSelectCategory(cat)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.categoryText,
+              selectedCategory === cat && styles.categoryTextSelected,
+            ]}
+          >
+            {cat}
+          </Text>
+        </AnimatedTouchable>
+      ))}
+    </ScrollView>
+  );
+};
+
+const PaintingCard = React.memo(({ painting }) => (
   <View style={styles.itemContainer}>
     <Image source={{ uri: painting.image }} style={styles.image} />
     <View style={styles.textContainer}>
@@ -115,7 +147,7 @@ const PaintingCard = ({ painting }) => (
       <Text style={styles.artist}>{painting.artist}</Text>
     </View>
   </View>
-);
+));
 
 const SearchBar = ({ searchText, onChangeText }) => (
   <View style={styles.searchBarContainer}>
@@ -125,32 +157,53 @@ const SearchBar = ({ searchText, onChangeText }) => (
       onChangeText={onChangeText}
       style={styles.searchInput}
       clearButtonMode="while-editing"
+      placeholderTextColor={colors.maroon(0.5)}
     />
   </View>
 );
 
 export default function CategoryScreen({ route }) {
-  const { categoryName } = route.params;
+  const { categoryName } = route?.params || {};
   const [selectedCategory, setSelectedCategory] = useState(categoryName || categories[0]);
   const [searchText, setSearchText] = useState('');
 
-  const filteredPaintings = paintingData.filter(
-    (p) =>
-      p.category === selectedCategory &&
-      p.title.toLowerCase().includes(searchText.toLowerCase())
+  // Filter lukisan sesuai kategori dan pencarian
+  const filteredPaintings = useMemo(
+    () =>
+      paintingData.filter(
+        (p) =>
+          p.category === selectedCategory &&
+          p.title.toLowerCase().includes(searchText.toLowerCase())
+      ),
+    [selectedCategory, searchText]
+  );
+
+  const handleSelectCategory = useCallback(
+    (cat) => {
+      setSelectedCategory(cat);
+      setSearchText(''); // reset search on category change (optional)
+    },
+    []
   );
 
   return (
     <View style={styles.container}>
-      <CategoryList selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+      <CategoryList selectedCategory={selectedCategory} onSelectCategory={handleSelectCategory} />
       <SearchBar searchText={searchText} onChangeText={setSearchText} />
       <Text style={styles.title}>Kategori: {selectedCategory}</Text>
-      <FlatList
-        data={filteredPaintings}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PaintingCard painting={item} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
-      />
+      {filteredPaintings.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Lukisan tidak ditemukan.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredPaintings}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <PaintingCard painting={item} />}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -165,21 +218,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   categoryItem: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginRight: 8,
-    borderRadius: 12,
-    backgroundColor: colors.white(),
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    marginRight: 12,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.maroon(),
-    minWidth: 80,
+    minWidth: 90,
     alignItems: 'center',
-  },
-  categoryItemSelected: {
-    backgroundColor: colors.maroon(),
+    justifyContent: 'center',
   },
   categoryText: {
-    fontSize: 10,
+    fontSize: 14,
     color: colors.maroon(),
     fontFamily: fontType['Pjs-Regular'],
   },
@@ -189,40 +238,50 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 12,
     borderRadius: 20,
     backgroundColor: colors.white(),
     elevation: 3,
+    shadowColor: colors.maroon(),
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
   },
   searchInput: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 16,
     fontFamily: fontType['Pjs-Regular'],
     color: colors.maroon(),
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: fontType['Pjs-ExtraBold'],
     color: colors.gold(),
     paddingHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   itemContainer: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 14,
     backgroundColor: colors.white(),
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
-    elevation: 2,
+    elevation: 3,
+    shadowColor: colors.maroon(),
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   image: {
-    width: 100,
-    height: 80,
+    width: 110,
+    height: 90,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
   },
   textContainer: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     justifyContent: 'center',
   },
   titleItem: {
@@ -233,6 +292,17 @@ const styles = StyleSheet.create({
   artist: {
     fontSize: 14,
     color: colors.maroon(0.7),
-    marginTop: 4,
+    marginTop: 6,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: colors.maroon(0.6),
+    fontFamily: fontType['Pjs-Regular'],
   },
 });
