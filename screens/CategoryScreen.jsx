@@ -9,7 +9,6 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
 
 const colors = {
   white: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -22,7 +21,6 @@ const fontType = {
   'Pjs-ExtraBold': 'System',
 };
 
-// Dummy data
 const categories = ['Impressionism', 'Renaissance', 'Surrealism', 'Baroque'];
 
 const paintingData = [
@@ -63,7 +61,8 @@ const paintingData = [
     title: 'Portrait of a Man',
     artist: 'Jan van Eyck',
     category: 'Renaissance',
-    image: 'https://tse4.mm.bing.net/th?id=OIP.Rehs00iutKiUIidagsKg9wHaKW&pid=Api',
+    image:
+      'https://tse4.mm.bing.net/th?id=OIP.Rehs00iutKiUIidagsKg9wHaKW&pid=Api',
   },
   {
     id: 6,
@@ -75,46 +74,42 @@ const paintingData = [
   },
 ];
 
-// Komponen daftar kategori horizontal
-const CategoryList = ({ selectedCategory, onSelectCategory }) => {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.categoryListContainer}
-      contentContainerStyle={{ paddingHorizontal: 16 }}
-      decelerationRate="fast"
-      snapToInterval={100} // sesuai minWidth + marginRight
-      snapToAlignment="start"
-      pagingEnabled={false}
-    >
-      {categories.map((cat) => (
-        <TouchableOpacity
-          key={cat}
+const CategoryList = ({ selectedCategory, onSelectCategory }) => (
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    style={styles.categoryListContainer}
+    contentContainerStyle={{ paddingHorizontal: 16 }}
+    decelerationRate="fast"
+    snapToInterval={100}
+    snapToAlignment="start"
+    pagingEnabled={false}
+  >
+    {categories.map((cat) => (
+      <TouchableOpacity
+        key={cat}
+        style={[
+          styles.categoryItem,
+          selectedCategory === cat && styles.categoryItemSelected,
+        ]}
+        onPress={() => onSelectCategory(cat)}
+      >
+        <Text
           style={[
-            styles.categoryItem,
-            selectedCategory === cat && styles.categoryItemSelected,
+            styles.categoryText,
+            selectedCategory === cat && styles.categoryTextSelected,
           ]}
-          onPress={() => onSelectCategory(cat)}
         >
-          <Text
-            style={[
-              styles.categoryText,
-              selectedCategory === cat && styles.categoryTextSelected,
-            ]}
-          >
-            {cat}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
-  );
-};
+          {cat}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </ScrollView>
+);
 
-// Komponen card lukisan
 const PaintingCard = ({ painting }) => (
   <View style={styles.itemContainer}>
-    <Image source={{ uri: painting.image }} style={styles.image} resizeMode="cover" />
+    <Image source={{ uri: painting.image }} style={styles.image} />
     <View style={styles.textContainer}>
       <Text style={styles.titleItem}>{painting.title}</Text>
       <Text style={styles.artist}>{painting.artist}</Text>
@@ -122,7 +117,6 @@ const PaintingCard = ({ painting }) => (
   </View>
 );
 
-// Komponen SearchBar sederhana
 const SearchBar = ({ searchText, onChangeText }) => (
   <View style={styles.searchBarContainer}>
     <TextInput
@@ -135,14 +129,11 @@ const SearchBar = ({ searchText, onChangeText }) => (
   </View>
 );
 
-const CategoryScreen = () => {
-  const route = useRoute();
-  const initialCategory = route.params?.selectedCategory || categories[0];
-
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+export default function CategoryScreen({ route }) {
+  const { categoryName } = route.params;
+  const [selectedCategory, setSelectedCategory] = useState(categoryName || categories[0]);
   const [searchText, setSearchText] = useState('');
 
-  // Filter data berdasarkan kategori dan pencarian judul
   const filteredPaintings = paintingData.filter(
     (p) =>
       p.category === selectedCategory &&
@@ -151,10 +142,7 @@ const CategoryScreen = () => {
 
   return (
     <View style={styles.container}>
-      <CategoryList
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-      />
+      <CategoryList selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
       <SearchBar searchText={searchText} onChangeText={setSearchText} />
       <Text style={styles.title}>Kategori: {selectedCategory}</Text>
       <FlatList
@@ -165,7 +153,7 @@ const CategoryScreen = () => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -177,10 +165,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   categoryItem: {
-    paddingVertical: 4,       // sebelumnya 6, dikurangi jadi 4
-  paddingHorizontal: 8,     // sebelumnya 12, dikurangi jadi 8
-  marginRight: 8,           // dikurangi sedikit supaya rapih
-  borderRadius: 12,         // bisa diperkecil agar lebih kecil kotaknya
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginRight: 8,
+    borderRadius: 12,
     backgroundColor: colors.white(),
     borderWidth: 1,
     borderColor: colors.maroon(),
@@ -191,7 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.maroon(),
   },
   categoryText: {
-     fontSize: 10, 
+    fontSize: 10,
     color: colors.maroon(),
     fontFamily: fontType['Pjs-Regular'],
   },
@@ -248,5 +236,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
-export default CategoryScreen;

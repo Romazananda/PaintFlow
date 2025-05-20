@@ -1,79 +1,87 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  Home2,
+  Category,
+  AddSquare,
+  ProfileCircle,
+} from 'iconsax-react-native';
 
-import { Element3 } from 'iconsax-react-native';
 import { colors, fontType } from './src/theme';
-
-import CategoryList from './components/CategoryList';
-import SearchBar from './components/SearchBar';
-import PaintingList from './components/PaintingList';
-
-import SearchResultsScreen from './screens/SearchResultsScreen';
+import HomeScreen from './screens/HomeScreen';
 import CategoryScreen from './screens/CategoryScreen';
+import AddPaintingScreen from './screens/AddPaintingScreen';
+import SearchResultsScreen from './screens/SearchResultsScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
+// Stack Navigator untuk halaman lain
 const Stack = createNativeStackNavigator();
 
-function HomeScreen({ navigation }) {
+// Bottom Tab Navigator
+const Tab = createBottomTabNavigator();
+
+// Tab Navigasi Utama
+function MainTabs() {
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>PaintFlow</Text>
-        <View style={styles.iconContainer}>
-          <Element3 color={colors.white()} variant="Linear" size={24} />
-        </View>
-      </View>
-
-      {/* Kategori */}
-      <CategoryList navigation={navigation} /> {/* ✅ Kirim navigation */}
-
-      {/* Search Bar */}
-      <SearchBar />
-
-      {/* Daftar Lukisan */}
-      <PaintingList />
-    </View>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.maroon(),
+        tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          height: 60,
+          paddingBottom: 5,
+        },
+        tabBarIcon: ({ color }) => {
+          if (route.name === 'Home') return <Home2 color={color} size={24} />;
+          if (route.name === 'Category') return <Category color={color} size={24} />;
+          if (route.name === 'Add') return <AddSquare color={color} size={24} />;
+          if (route.name === 'Profile') return <ProfileCircle color={color} size={24} />;
+        },
+        tabBarLabelStyle: {
+          fontFamily: fontType.regular,
+          fontSize: 12,
+        },
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Category" component={CategoryScreen} />
+      <Tab.Screen name="Add" component={AddPaintingScreen} />
+     <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
   );
 }
 
-
+// Root Stack Navigasi
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home" screenOptions={{headerShown: false}}>
-        <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* Tab utama */}
+        <Stack.Screen name="MainTabs" component={MainTabs} />
+
+        {/* Halaman stack di luar tab */}
         <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
-        <Stack.Screen name="Category" component={CategoryScreen} options={{ title: 'Kategori Lukisan' }} />
+        {/* Tambah stack lain di sini jika perlu */}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
+// Styling
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    backgroundColor: colors.white(),
-  },
-  header: {
-    paddingHorizontal: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 80,
-    backgroundColor: colors.maroon(),
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 10,
-    position: 'relative',
   },
-  title: {
-    fontSize: 24,
-    fontFamily: fontType['Pjs-ExtraBold'],
-    color: colors.gold(),
-  },
-  iconContainer: {
-    position: 'absolute',
-    right: 24,
+  placeholder: {
+    fontSize: 18,
+    color: 'gray',
+    fontFamily: fontType.medium,
   },
 });
