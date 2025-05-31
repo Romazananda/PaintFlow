@@ -6,6 +6,7 @@ import { colors, fontType } from '../src/theme';
 import CategoryList from '../components/CategoryList';
 import SearchBar from '../components/SearchBar';
 import PaintingList from '../components/PaintingList';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 export default function HomeScreen({ navigation }) {
   return (

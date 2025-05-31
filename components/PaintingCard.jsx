@@ -1,88 +1,111 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { fontType, colors } from '../src/theme';
-import Ionicons from 'react-native-vector-icons/Ionicons';
- // Pastikan Anda sudah install `@expo/vector-icons` atau `react-native-vector-icons`
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
-export default function PaintingCard({ painting, isFavorite: isFavoriteProp, onToggleFavorite }) {
-  const [favorite, setFavorite] = useState(isFavoriteProp || false);
+export default function PaintingCard({
+  painting,
+  isFavorite,
+  onToggleFavorite,
+  onDelete,
+  onEdit,
+}) {
+  // DEBUG: Lihat isi objek painting
+  console.log('Painting:', painting);
 
-  const handleFavoritePress = () => {
-    const newFavorite = !favorite;
-    setFavorite(newFavorite);
-    if (onToggleFavorite) {
-      onToggleFavorite(painting.id, newFavorite);
-    }
-  };
+  // Ambil nilai string dengan fallback
+  const namaLukisan =
+    typeof painting.nama_lukisan === 'string'
+      ? painting.nama_lukisan
+      : JSON.stringify(painting.nama_lukisan);
+
+  const namaPenulis =
+    typeof painting.nama_penulis === 'string'
+      ? painting.nama_penulis
+      : JSON.stringify(painting.nama_penulis);
+
+  // Ambil nama kategori jika objek, atau langsung string
+  const kategori =
+    typeof painting.kategori === 'object' && painting.kategori !== null
+      ? painting.kategori.nama || 'Tidak diketahui'
+      : typeof painting.kategori === 'string'
+      ? painting.kategori
+      : 'Tidak diketahui';
 
   return (
-    <View style={styles.cardItem}>
-      <Image style={styles.cardImage} source={{ uri: painting.image }} />
-      
-      <TouchableOpacity style={styles.favoriteIcon} onPress={handleFavoritePress}>
-        <Ionicons
-          name={favorite ? 'heart' : 'heart-outline'}
-          size={24}
-         color={favorite ? colors.red() : colors.grey()}
-        />
-      </TouchableOpacity>
+    <View style={styles.card}>
+      <Image source={{ uri: painting.gambar }} style={styles.image} />
+      <View style={styles.info}>
+        <Text style={styles.title}>{namaLukisan}</Text>
+        <Text style={styles.author}>oleh {namaPenulis}</Text>
+        <Text style={styles.category}>Kategori: {kategori}</Text>
 
-      <View style={styles.cardContent}>
-        <Text style={styles.cardCategory}>{painting.category}</Text>
-        <Text style={styles.cardTitle}>{painting.title}</Text>
-        <Text style={styles.cardText}>{painting.artist}</Text>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            onPress={() => onEdit(painting)}
+            style={styles.editButton}
+          >
+            <Text style={styles.buttonText}>Edit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onDelete(painting.id)}
+            style={styles.deleteButton}
+          >
+            <Text style={styles.buttonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cardItem: {
-    width: '100%',
-    backgroundColor: colors.white(),
-    borderRadius: 15,
-    elevation: 5,
-    marginBottom: 15,
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 4,
     overflow: 'hidden',
-    position: 'relative',
   },
-  cardImage: {
+  image: {
     width: '100%',
-    height: 250,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    resizeMode: 'cover',
+    height: 180,
   },
-  favoriteIcon: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: colors.white(0.7),
-    borderRadius: 20,
-    padding: 5,
+  info: {
+    padding: 12,
   },
-  cardContent: {
-    padding: 15,
-    alignItems: 'center',
-  },
-  cardCategory: {
-    color: colors.gold(),
-    fontSize: 12,
-    fontFamily: fontType['Pjs-SemiBold'],
-    textAlign: 'center',
-  },
-  cardTitle: {
+  title: {
     fontSize: 18,
-    fontFamily: fontType['Pjs-Bold'],
-    color: colors.black(),
-    marginTop: 10,
-    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#800000',
   },
-  cardText: {
+  author: {
     fontSize: 14,
-    fontFamily: fontType['Pjs-Medium'],
-    color: colors.grey(),
-    marginTop: 5,
-    textAlign: 'center',
+    color: '#555',
+    marginBottom: 4,
+  },
+  category: {
+    fontSize: 12,
+    color: '#777',
+    marginBottom: 10,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  editButton: {
+    backgroundColor: '#ffd700',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#c0392b',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

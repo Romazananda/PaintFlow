@@ -16,6 +16,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
 import { Picker } from '@react-native-picker/picker'; // jangan lupa install dan import ini
 import { colors, fontType } from '../src/theme';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 // Contoh kategori, kamu bisa ganti fetch API kalau perlu
 const categoryOptions = [

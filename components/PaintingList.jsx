@@ -1,66 +1,81 @@
-import React, { useState } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, StyleSheet, ActivityIndicator, Text, Alert } from 'react-native';
 import PaintingCard from './PaintingCard';
+import { useNavigation } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 export default function PaintingList({ filterCategory }) {
-  const initialPaintings = [
-    {
-      id: 1,
-      title: 'The Starry Night',
-      artist: 'Vincent van Gogh',
-      category: 'Impressionism',
-      image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80',
-    },
-    {
-      id: 2,
-      title: 'Mona Lisa',
-      artist: 'Leonardo da Vinci',
-      category: 'Renaissance',
-      image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
-    },
-    {
-      id: 3,
-      title: 'The Persistence of Memory',
-      artist: 'Salvador Dalí',
-      category: 'Surrealism',
-      image: 'https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg',
-    },
-    {
-      id: 4,
-      title: 'Girl with a Pearl Earring',
-      artist: 'Johannes Vermeer',
-      category: 'Baroque',
-      image: 'https://upload.wikimedia.org/wikipedia/commons/d/d7/Meisje_met_de_parel.jpg',
-    },
-    {
-      id: 5,
-      title: 'Portrait of a Man',
-      artist: 'Jan van Eyck',
-      category: 'Renaissance',
-      image: 'https://tse4.mm.bing.net/th?id=OIP.Rehs00iutKiUIidagsKg9wHaKW&pid=Api',
-    },
-    {
-      id: 6,
-      title: 'The Birth of Venus',
-      artist: 'Sandro Botticelli',
-      category: 'Renaissance',
-      image: 'https://images.unsplash.com/photo-1555685812-4b943f1cb0eb?auto=format&fit=crop&w=800&q=60',
-    },
-  ];
+  const [paintings, setPaintings] = useState([]);
+  const [favorites, setFavorites] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigation = useNavigation();
 
-  // STATE: daftar lukisan dan status favorit
-  const [paintings, setPaintings] = useState(initialPaintings);
-  const [favorites, setFavorites] = useState({}); // { 1: true, 3: false, ... }
+  const API_URL = 'https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan';
 
-  // Handler toggle favorite
+  useEffect(() => {
+    fetchPaintings();
+  }, []);
+
+  const fetchPaintings = async () => {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      setPaintings(data);
+    } catch (err) {
+      setError('Gagal memuat data lukisan');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleFavorite = (id, isFav) => {
     setFavorites(prev => ({ ...prev, [id]: isFav }));
   };
 
-  // FILTER berdasarkan kategori jika ada props filterCategory
+  const handleDelete = async (id) => {
+    Alert.alert('Konfirmasi', 'Apakah Anda yakin ingin menghapus lukisan ini?', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            setPaintings(prev => prev.filter(item => item.id !== id));
+          } catch (error) {
+            Alert.alert('Gagal', 'Tidak dapat menghapus data.');
+            console.error(error);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleEdit = (painting) => {
+    navigation.navigate('EditPainting', { painting });
+  };
+
   const filteredPaintings = filterCategory
-    ? paintings.filter(p => p.category === filterCategory)
+    ? paintings.filter(p => p.kategori === filterCategory)
     : paintings;
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#800000" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView>
@@ -71,6 +86,8 @@ export default function PaintingList({ filterCategory }) {
             painting={painting}
             isFavorite={favorites[painting.id] || false}
             onToggleFavorite={handleToggleFavorite}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
           />
         ))}
       </View>
@@ -83,5 +100,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     gap: 15,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 40,
   },
 });

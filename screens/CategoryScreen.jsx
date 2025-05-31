@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 const colors = {
   white: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,

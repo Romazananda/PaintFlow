@@ -11,6 +11,7 @@ import {
 import { colors, fontType } from '../src/theme';
 import { More } from 'iconsax-react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 const posts = [
   {

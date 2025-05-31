@@ -3,6 +3,7 @@ import { View, TextInput, Pressable, StyleSheet } from 'react-native';
 import { SearchNormal } from 'iconsax-react-native';
 import { colors } from '../src/theme';
 import { useNavigation } from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 export default function SearchBar() {
   const [query, setQuery] = useState('');

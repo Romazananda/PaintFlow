@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import axios from 'axios';
 import { colors, fontType } from '../src/theme';
+import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
 
 export default function SearchResultsScreen({ route }) {
   const { query } = route.params || '';
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  
 
   useEffect(() => {
     const fetchAndFilterPaintings = async () => {
