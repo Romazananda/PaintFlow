@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
+import axios from 'axios';
 
 const colors = {
   white: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -22,74 +24,17 @@ const fontType = {
   'Pjs-ExtraBold': 'System',
 };
 
-const categories = ['Impressionism', 'Renaissance', 'Surrealism', 'Baroque'];
-
-const paintingData = [
-  {
-    id: 1,
-    title: 'The Starry Night',
-    artist: 'Vincent van Gogh',
-    category: 'Impressionism',
-    image:
-      'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1740&q=80',
-  },
-  {
-    id: 2,
-    title: 'Mona Lisa',
-    artist: 'Leonardo da Vinci',
-    category: 'Renaissance',
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg',
-  },
-  {
-    id: 3,
-    title: 'The Persistence of Memory',
-    artist: 'Salvador Dalí',
-    category: 'Surrealism',
-    image:
-      'https://upload.wikimedia.org/wikipedia/en/d/dd/The_Persistence_of_Memory.jpg',
-  },
-  {
-    id: 4,
-    title: 'Girl with a Pearl Earring',
-    artist: 'Johannes Vermeer',
-    category: 'Baroque',
-    image:
-      'https://upload.wikimedia.org/wikipedia/commons/d/d7/Meisje_met_de_parel.jpg',
-  },
-  {
-    id: 5,
-    title: 'Portrait of a Man',
-    artist: 'Jan van Eyck',
-    category: 'Renaissance',
-    image:
-      'https://tse4.mm.bing.net/th?id=OIP.Rehs00iutKiUIidagsKg9wHaKW&pid=Api',
-  },
-  {
-    id: 6,
-    title: 'The Birth of Venus',
-    artist: 'Sandro Botticelli',
-    category: 'Renaissance',
-    image:
-      'https://images.unsplash.com/photo-1555685812-4b943f1cb0eb?auto=format&fit=crop&w=800&q=60',
-  },
-];
-
-// Animated TouchableOpacity for category item with fade
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const CategoryList = ({ selectedCategory, onSelectCategory }) => {
-  // Animations for categories fade
-  const animations = useMemo(
-    () =>
-      categories.reduce((acc, cat) => {
-        acc[cat] = new Animated.Value(cat === selectedCategory ? 1 : 0.5);
-        return acc;
-      }, {}),
-    []
-  );
+const CategoryList = ({ categories, selectedCategory, onSelectCategory }) => {
+  const animations = useMemo(() => {
+    return categories.reduce((acc, cat) => {
+      acc[cat] = new Animated.Value(cat === selectedCategory ? 1 : 0.5);
+      return acc;
+    }, {});
+  }, [categories]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     categories.forEach((cat) => {
       Animated.timing(animations[cat], {
         toValue: cat === selectedCategory ? 1 : 0.5,
@@ -97,7 +42,7 @@ const CategoryList = ({ selectedCategory, onSelectCategory }) => {
         useNativeDriver: true,
       }).start();
     });
-  }, [selectedCategory]);
+  }, [selectedCategory, categories]);
 
   return (
     <ScrollView
@@ -105,10 +50,6 @@ const CategoryList = ({ selectedCategory, onSelectCategory }) => {
       showsHorizontalScrollIndicator={false}
       style={styles.categoryListContainer}
       contentContainerStyle={{ paddingHorizontal: 16 }}
-      decelerationRate="fast"
-      snapToInterval={100}
-      snapToAlignment="start"
-      pagingEnabled={false}
     >
       {categories.map((cat) => (
         <AnimatedTouchable
@@ -116,8 +57,7 @@ const CategoryList = ({ selectedCategory, onSelectCategory }) => {
           style={[
             styles.categoryItem,
             {
-              backgroundColor:
-                selectedCategory === cat ? colors.maroon() : colors.white(),
+              backgroundColor: selectedCategory === cat ? colors.maroon() : colors.white(),
               borderColor: colors.maroon(),
               opacity: animations[cat],
             },
@@ -141,10 +81,10 @@ const CategoryList = ({ selectedCategory, onSelectCategory }) => {
 
 const PaintingCard = React.memo(({ painting }) => (
   <View style={styles.itemContainer}>
-    <Image source={{ uri: painting.image }} style={styles.image} />
+    <Image source={{ uri: painting.gambar }} style={styles.image} />
     <View style={styles.textContainer}>
-      <Text style={styles.titleItem}>{painting.title}</Text>
-      <Text style={styles.artist}>{painting.artist}</Text>
+      <Text style={styles.titleItem}>{painting.nama_lukisan}</Text>
+      <Text style={styles.artist}>{painting.nama_penulis}</Text>
     </View>
   </View>
 ));
@@ -164,45 +104,71 @@ const SearchBar = ({ searchText, onChangeText }) => (
 
 export default function CategoryScreen({ route }) {
   const { categoryName } = route?.params || {};
-  const [selectedCategory, setSelectedCategory] = useState(categoryName || categories[0]);
+  const [paintingData, setPaintingData] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Filter lukisan sesuai kategori dan pencarian
-  const filteredPaintings = useMemo(
-    () =>
-      paintingData.filter(
-        (p) =>
-          p.category === selectedCategory &&
-          p.title.toLowerCase().includes(searchText.toLowerCase())
-      ),
-    [selectedCategory, searchText]
-  );
+  useEffect(() => {
+    const fetchPaintings = async () => {
+      try {
+        const response = await axios.get('https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan');
+        const data = response.data;
 
-  const handleSelectCategory = useCallback(
-    (cat) => {
-      setSelectedCategory(cat);
-      setSearchText(''); // reset search on category change (optional)
-    },
-    []
-  );
+        setPaintingData(data);
+
+        const uniqueCategories = [...new Set(data.map(item => item.kategori))];
+        setCategories(uniqueCategories);
+
+        setSelectedCategory(categoryName || uniqueCategories[0]);
+      } catch (error) {
+        console.error('Gagal mengambil data lukisan:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPaintings();
+  }, [categoryName]);
+
+  const filteredPaintings = useMemo(() =>
+    paintingData.filter(p =>
+      p.kategori === selectedCategory &&
+      p.nama_lukisan.toLowerCase().includes(searchText.toLowerCase())
+    ), [selectedCategory, searchText, paintingData]);
+
+  const handleSelectCategory = useCallback(cat => {
+    setSelectedCategory(cat);
+    setSearchText('');
+  }, []);
 
   return (
     <View style={styles.container}>
-      <CategoryList selectedCategory={selectedCategory} onSelectCategory={handleSelectCategory} />
-      <SearchBar searchText={searchText} onChangeText={setSearchText} />
-      <Text style={styles.title}>Kategori: {selectedCategory}</Text>
-      {filteredPaintings.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Lukisan tidak ditemukan.</Text>
-        </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.maroon()} style={{ marginTop: 20 }} />
       ) : (
-        <FlatList
-          data={filteredPaintings}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <PaintingCard painting={item} />}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <CategoryList
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleSelectCategory}
+          />
+          <SearchBar searchText={searchText} onChangeText={setSearchText} />
+          <Text style={styles.title}>Kategori: {selectedCategory}</Text>
+          {filteredPaintings.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>Lukisan tidak ditemukan.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredPaintings}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => <PaintingCard painting={item} />}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </>
       )}
     </View>
   );

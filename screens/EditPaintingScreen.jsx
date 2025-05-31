@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,21 +14,26 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
-import { Picker } from '@react-native-picker/picker';  // import Picker
+import { Picker } from '@react-native-picker/picker'; // jangan lupa install dan import ini
 import { colors, fontType } from '../src/theme';
 
+// Contoh kategori, kamu bisa ganti fetch API kalau perlu
 const categoryOptions = [
   { id: '1', nama: 'Abstrak' },
   { id: '2', nama: 'Realistik' },
   { id: '3', nama: 'Impresionis' },
-  // Tambah kategori lain sesuai kebutuhan
 ];
 
-export default function AddPaintingScreen() {
-  const [namaLukisan, setNamaLukisan] = useState('');
-  const [namaPenulis, setNamaPenulis] = useState('');
-  const [kategori, setKategori] = useState(null); // simpan objek kategori
-  const [imageUri, setImageUri] = useState(null);
+export default function EditPaintingScreen({ route, navigation }) {
+  const { painting } = route.params;
+
+  // Karena painting.kategori mungkin string, kita cari objek kategori yang sesuai
+  const initialKategori = categoryOptions.find(cat => cat.nama === painting.kategori) || null;
+
+  const [namaLukisan, setNamaLukisan] = useState(painting.nama_lukisan || '');
+  const [namaPenulis, setNamaPenulis] = useState(painting.nama_penulis || '');
+  const [kategori, setKategori] = useState(initialKategori); // kategori objek
+  const [imageUri, setImageUri] = useState(painting.gambar || '');
 
   const requestStoragePermission = async () => {
     if (Platform.OS === 'android') {
@@ -82,30 +87,29 @@ export default function AddPaintingScreen() {
     }
 
     try {
-      const response = await axios.post('https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan', {
-        nama_lukisan: namaLukisan,
-        nama_penulis: namaPenulis,
-        kategori: kategori.nama,  // Kirim nama kategori, sesuaikan API
-        gambar: imageUri,
-      });
+      const response = await axios.put(
+        `https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan/${painting.id}`,
+        {
+          nama_lukisan: namaLukisan,
+          nama_penulis: namaPenulis,
+          kategori: kategori.nama,  // kirim nama kategori ke API
+          gambar: imageUri,
+        }
+      );
 
-      Alert.alert('Sukses', 'Data lukisan berhasil disimpan ke API!');
-
-      // Reset form
-      setNamaLukisan('');
-      setNamaPenulis('');
-      setKategori(null);
-      setImageUri(null);
+      console.log('Data berhasil diperbarui:', response.data);
+      Alert.alert('Sukses', 'Data lukisan berhasil diperbarui!');
+      navigation.goBack();
     } catch (error) {
-      console.error('Gagal menyimpan data:', error);
-      Alert.alert('Gagal', 'Terjadi kesalahan saat menyimpan data.');
+      console.error('Gagal mengupdate data:', error);
+      Alert.alert('Gagal', 'Terjadi kesalahan saat mengupdate data.');
     }
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tambah Data Lukisan</Text>
+        <Text style={styles.title}>Edit Data Lukisan</Text>
       </View>
 
       <View style={styles.form}>
@@ -124,6 +128,7 @@ export default function AddPaintingScreen() {
           placeholderTextColor={colors.grey()}
         />
 
+        {/* Ganti TextInput kategori dengan Picker */}
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={kategori ? kategori.id : null}
@@ -141,7 +146,7 @@ export default function AddPaintingScreen() {
         </View>
 
         <TouchableOpacity onPress={pickImage} style={styles.uploadButton}>
-          <Text style={styles.uploadText}>Upload Foto</Text>
+          <Text style={styles.uploadText}>Ganti Foto</Text>
         </TouchableOpacity>
 
         {imageUri ? (
@@ -152,7 +157,7 @@ export default function AddPaintingScreen() {
           </Text>
         )}
 
-        <Button title="Simpan" onPress={handleSubmit} color={colors.maroon()} />
+        <Button title="Perbarui" onPress={handleSubmit} color={colors.maroon()} />
       </View>
     </ScrollView>
   );
