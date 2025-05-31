@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
-import { Picker } from '@react-native-picker/picker'; // jangan lupa install dan import ini
+import { Picker } from '@react-native-picker/picker';
 import { colors, fontType } from '../src/theme';
-import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
+import firestore from '@react-native-firebase/firestore';
+import notifee, { EventType, AndroidImportance } from '@notifee/react-native';
 
-// Contoh kategori, kamu bisa ganti fetch API kalau perlu
 const categoryOptions = [
   { id: '1', nama: 'Abstrak' },
   { id: '2', nama: 'Realistik' },
@@ -27,36 +27,90 @@ const categoryOptions = [
 
 export default function EditPaintingScreen({ route, navigation }) {
   const { painting } = route.params;
-
-  // Karena painting.kategori mungkin string, kita cari objek kategori yang sesuai
   const initialKategori = categoryOptions.find(cat => cat.nama === painting.kategori) || null;
 
   const [namaLukisan, setNamaLukisan] = useState(painting.nama_lukisan || '');
   const [namaPenulis, setNamaPenulis] = useState(painting.nama_penulis || '');
-  const [kategori, setKategori] = useState(initialKategori); // kategori objek
+  const [kategori, setKategori] = useState(initialKategori);
   const [imageUri, setImageUri] = useState(painting.gambar || '');
 
+  // Handle notifikasi foreground
+  useEffect(() => {
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.ACTION_PRESS && detail.pressAction.id === 'default') {
+        console.log('Notifikasi ditekan (foreground):', detail.notification);
+      }
+    });
+
+    return () => unsubscribe(); // cleanup
+  }, []);
+
+  // Handle notifikasi background
+  notifee.onBackgroundEvent(async ({ type, detail }) => {
+    if (type === EventType.ACTION_PRESS && detail.pressAction.id === 'default') {
+      console.log('Notifikasi ditekan (background):', detail.notification);
+    }
+  });
+
+  const showSuccessNotification = async () => {
+    await notifee.displayNotification({
+      title: '🎉 Lukisan Diperbarui',
+      body: `${namaLukisan} telah berhasil diperbarui.`,
+      android: {
+        channelId: await createChannelId(),
+        smallIcon: 'ic_launcher', // pastikan icon ini ada di android/app/src/main/res/drawable
+        pressAction: {
+          id: 'default',
+        },
+      },
+    });
+  };
+
+  const createChannelId = async () => {
+    const channelId = await notifee.createChannel({
+      id: 'default',
+      name: 'Default Channel',
+      importance: AndroidImportance.HIGH,
+    });
+    return channelId;
+  };
+
   const requestStoragePermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
+  if (Platform.OS === 'android') {
+    try {
+      if (Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          {
+            title: 'Izin Akses Media',
+            message: 'Aplikasi memerlukan akses ke media untuk mengunggah gambar.',
+            buttonNeutral: 'Tanya Nanti',
+            buttonNegative: 'Tolak',
+            buttonPositive: 'Izinkan',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } else {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
           {
             title: 'Izin Akses Galeri',
-            message: 'Aplikasi memerlukan akses ke galeri Anda',
+            message: 'Aplikasi memerlukan akses ke galeri Anda.',
             buttonNeutral: 'Tanya Nanti',
             buttonNegative: 'Tolak',
             buttonPositive: 'Izinkan',
-          },
+          }
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
       }
+    } catch (err) {
+      console.warn(err);
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+};
+
 
   const pickImage = async () => {
     const hasPermission = await requestStoragePermission();
@@ -74,8 +128,7 @@ export default function EditPaintingScreen({ route, navigation }) {
         } else if (response.errorCode) {
           console.error('ImagePicker Error: ', response.errorMessage);
         } else if (response.assets && response.assets.length > 0) {
-          const selectedImage = response.assets[0];
-          setImageUri(selectedImage.uri);
+          setImageUri(response.assets[0].uri);
         }
       }
     );
@@ -93,12 +146,13 @@ export default function EditPaintingScreen({ route, navigation }) {
         {
           nama_lukisan: namaLukisan,
           nama_penulis: namaPenulis,
-          kategori: kategori.nama,  // kirim nama kategori ke API
+          kategori: kategori.nama,
           gambar: imageUri,
         }
       );
 
       console.log('Data berhasil diperbarui:', response.data);
+      await showSuccessNotification(); // tampilkan notifikasi
       Alert.alert('Sukses', 'Data lukisan berhasil diperbarui!');
       navigation.goBack();
     } catch (error) {
@@ -129,7 +183,6 @@ export default function EditPaintingScreen({ route, navigation }) {
           placeholderTextColor={colors.grey()}
         />
 
-        {/* Ganti TextInput kategori dengan Picker */}
         <View style={styles.pickerContainer}>
           <Picker
             selectedValue={kategori ? kategori.id : null}

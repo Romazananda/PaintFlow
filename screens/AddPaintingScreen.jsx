@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,44 +14,70 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
-import { Picker } from '@react-native-picker/picker';  // import Picker
+import { Picker } from '@react-native-picker/picker';
 import { colors, fontType } from '../src/theme';
-import firestore from '@react-native-firebase/firestore'; // Tidak dihapus
+import firestore from '@react-native-firebase/firestore';
+import notifee, { EventType, AndroidImportance } from '@notifee/react-native';
 
 const categoryOptions = [
   { id: '1', nama: 'Abstrak' },
   { id: '2', nama: 'Realistik' },
   { id: '3', nama: 'Impresionis' },
-  // Tambah kategori lain sesuai kebutuhan
 ];
 
 export default function AddPaintingScreen() {
   const [namaLukisan, setNamaLukisan] = useState('');
   const [namaPenulis, setNamaPenulis] = useState('');
-  const [kategori, setKategori] = useState(null); // simpan objek kategori
+  const [kategori, setKategori] = useState(null);
   const [imageUri, setImageUri] = useState(null);
 
+  useEffect(() => {
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      const { notification, pressAction } = detail;
+      if (type === EventType.ACTION_PRESS && pressAction.id === 'default') {
+        console.log('Notifikasi ditekan di foreground:', notification);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const requestStoragePermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
+  if (Platform.OS === 'android') {
+    try {
+      if (Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          {
+            title: 'Izin Akses Media',
+            message: 'Aplikasi memerlukan akses ke media untuk mengunggah gambar.',
+            buttonNeutral: 'Tanya Nanti',
+            buttonNegative: 'Tolak',
+            buttonPositive: 'Izinkan',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } else {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
           {
             title: 'Izin Akses Galeri',
-            message: 'Aplikasi memerlukan akses ke galeri Anda',
+            message: 'Aplikasi memerlukan akses ke galeri Anda.',
             buttonNeutral: 'Tanya Nanti',
             buttonNegative: 'Tolak',
             buttonPositive: 'Izinkan',
-          },
+          }
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
       }
+    } catch (err) {
+      console.warn(err);
+      return false;
     }
-    return true;
-  };
+  }
+  return true;
+};
+
 
   const pickImage = async () => {
     const hasPermission = await requestStoragePermission();
@@ -83,16 +109,36 @@ export default function AddPaintingScreen() {
     }
 
     try {
-      const response = await axios.post('https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan', {
-        nama_lukisan: namaLukisan,
-        nama_penulis: namaPenulis,
-        kategori: kategori.nama,  // Kirim nama kategori, sesuaikan API
-        gambar: imageUri,
+      const response = await axios.post(
+        'https://6829d51aab2b5004cb34e747.mockapi.io/api/lukisan',
+        {
+          nama_lukisan: namaLukisan,
+          nama_penulis: namaPenulis,
+          kategori: kategori.nama,
+          gambar: imageUri,
+        }
+      );
+
+      const channelId = await notifee.createChannel({
+        id: 'lukisan',
+        name: 'Notifikasi Lukisan',
+        importance: AndroidImportance.HIGH,
+      });
+
+      await notifee.displayNotification({
+        title: '✅ Data Lukisan Disimpan',
+        body: `Lukisan "${namaLukisan}" oleh ${namaPenulis} telah ditambahkan.`,
+        android: {
+          channelId,
+          smallIcon: 'ic_launcher', // icon harus tersedia di res/drawable
+          pressAction: {
+            id: 'default',
+          },
+        },
       });
 
       Alert.alert('Sukses', 'Data lukisan berhasil disimpan ke API!');
 
-      // Reset form
       setNamaLukisan('');
       setNamaPenulis('');
       setKategori(null);
